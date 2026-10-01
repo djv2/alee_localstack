@@ -1,0 +1,6 @@
+**/.terraform/*
+**/terraform.tfstate*
+**/tfplan
+plan.json
+insight.json
+__pycache__/
