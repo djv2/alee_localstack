@@ -4,6 +4,6 @@ services:
     ports:
       - "4566:4566"
     environment:
-      SERVICES: s3,sqs,lambda,iam,sts,logs,events
+      SERVICES: s3,sqs,iam,sts
       AWS_DEFAULT_REGION: us-east-1
       LS_LOG: warn
