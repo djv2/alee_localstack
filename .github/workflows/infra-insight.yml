@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
       - "infra/**"
-      - "app/**"
       - "scripts/**"
       - ".github/workflows/infra-insight.yml"
 
