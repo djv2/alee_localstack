@@ -9,7 +9,7 @@ A small proof of concept: on infrastructure pull requests, GitHub Actions starts
 3. Generate `insight.json` with the configured security checks.
 4. Apply the plan, post the insight to the PR, and upload the JSON artifact.
 
-The demo provisions an S3 bucket, SQS queue, IAM role/policy, and Lambda function. The analyzer currently flags wildcard IAM actions/resources and selected S3 public-access settings. It is a small heuristic demo, not a full security scanner.
+The demo provisions an S3 bucket, SQS queue, and IAM role/policy. The analyzer currently flags wildcard IAM actions/resources and selected S3 public-access settings. It is a small heuristic demo, not a full security scanner.
 
 ## GitHub setup
 
