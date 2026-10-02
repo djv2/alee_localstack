@@ -1,36 +1,31 @@
 # LocalStack PR Infrastructure Insights
 
-A small proof of concept that provisions changed Terraform infrastructure into an ephemeral LocalStack instance for each pull request, analyzes the Terraform plan, and publishes a developer/agent-ready insight.
+A small proof of concept: on infrastructure pull requests, GitHub Actions starts a temporary LocalStack instance, plans and applies Terraform changes, analyzes the plan, and posts an actionable insight.
 
-## What it demonstrates
+## Flow
 
-- Terraform-managed S3, SQS, Lambda, and IAM resources.
-- GitHub Actions starts LocalStack for each PR, runs `terraform plan`, analyzes the JSON plan, and applies the change locally.
-- A concise PR comment plus `insight.json` as a workflow artifact.
-- A security check for wildcard IAM permissions and public S3 access settings.
+1. Start LocalStack with the `lstk` CLI.
+2. Run Terraform plan against LocalStack.
+3. Generate `insight.json` with the configured security checks.
+4. Apply the plan, post the insight to the PR, and upload the JSON artifact.
 
-No cloud account, hosted service, dashboard, or persistent backend is required. LocalStack runs only inside the GitHub Actions job.
+The demo provisions an S3 bucket, SQS queue, and IAM role/policy. The analyzer currently flags wildcard IAM actions/resources and selected S3 public-access settings. It is a small heuristic demo, not a full security scanner.
 
-## Run locally
+## GitHub setup
 
-Requirements: Docker Compose, Terraform, and Python 3.
+Add a repository Actions secret named `LOCALSTACK_AUTH_TOKEN` containing your LocalStack CI Auth Token. The workflow follows the current LocalStack GitHub Actions guidance and installs/runs `lstk` directly.
+
+## Run locally (optional)
+
+Start LocalStack, then run:
 
 ```bash
-docker compose up -d
-cd infra
-terraform init
-terraform plan -out=tfplan
-terraform show -json tfplan > ../plan.json
-cd ..
-python scripts/generate_insight.py --plan plan.json --output insight.json
-cd infra && terraform apply -auto-approve
+lstk start
+terraform -chdir=infra init
+terraform -chdir=infra plan -out=tfplan
+terraform -chdir=infra show -json tfplan > plan.json
+python3 scripts/generate_insight.py --plan plan.json --output insight.json
+terraform -chdir=infra apply -auto-approve tfplan
 ```
 
-LocalStack is exposed at `http://localhost:4566`. The workflow uses dummy AWS credentials and Terraform's LocalStack endpoint overrides.
-
-## Demo pull requests
-
-- **Risky change:** grants wildcard IAM actions/resources. The insight should flag it and recommend narrowing permissions.
-- **Safe change:** changes a resource tag only. The plan should complete without a security finding.
-
-The analyzer is intentionally small and heuristic-based; it is a demonstration, not a complete IaC security scanner.
+Terraform configuration is kept in one file: `infra/main.tf`.
