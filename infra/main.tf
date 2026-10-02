@@ -39,3 +39,27 @@ resource "aws_sqs_queue" "jobs" {
   tags = { App = "localstack-demo" }
 }
 
+resource "aws_iam_role" "worker" {
+  name = "localstack-demo-worker"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "lambda.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "worker_queue" {
+  name = "read-demo-queue"
+  role = aws_iam_role.worker.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+      Resource = aws_sqs_queue.jobs.arn
+    }]
+  })
+}
