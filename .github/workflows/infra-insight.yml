@@ -18,7 +18,6 @@ jobs:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       AWS_DEFAULT_REGION: us-east-1
-      github-token: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,11 +33,11 @@ jobs:
 
       - name: Plan, inspect, and deploy
         run: |
-          terraform -chdir=infra init -input=false
-          terraform -chdir=infra plan -input=false -out=tfplan
-          terraform -chdir=infra show -json tfplan > plan.json
+          lstk terraform -chdir=infra init -input=false
+          lstk terraform -chdir=infra plan -input=false -out=tfplan
+          lstk terraform -chdir=infra show -json tfplan > plan.json
           python3 scripts/generate_insight.py --plan plan.json --output insight.json
-          terraform -chdir=infra apply -input=false -auto-approve tfplan
+          lstk terraform -chdir=infra apply -input=false -auto-approve tfplan
 
       - name: Comment on PR
         if: always() && hashFiles('insight.json') != ''
