@@ -21,17 +21,30 @@ jobs:
         with:
           terraform_version: 1.8.5
 
-      # Starts a LocalStack Cloud ephemeral instance, exposes its endpoint as
-      # AWS_ENDPOINT_URL to preview-cmd, and tears it down when the command ends.
+      # Invoke the supported ephemeral startup action directly. The
+      # LocalStack wrapper uses dynamic-uses internally; direct invocation
+      # avoids that path for this private repository.
+      #
+      # The startup action expects a pr-id artifact, so create it explicitly.
+      - name: Prepare PR ID for LocalStack preview
+        run: echo "${{ github.event.pull_request.number }}" > pr-id.txt
+
+      - name: Upload PR ID
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-id
+          path: pr-id.txt
+
       - name: Provision and inspect in LocalStack Cloud
         id: localstack-preview
-        uses: LocalStack/setup-localstack@v0.3.2
+        uses: LocalStack/setup-localstack/ephemeral/startup@v0.3.2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          state-backend: ephemeral
-          state-action: start
+          # Empty token skips the nested PR-comment preparation step.
+          # Our workflow posts the infrastructure insight separately below.
+          github-token: ""
+          localstack-api-key: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
           preview-cmd: ./scripts/preview.sh
-          include-preview: "false"
+          lifetime: "30"
         env:
           LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
 
