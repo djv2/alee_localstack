@@ -2,7 +2,6 @@ terraform {
   required_version = ">= 1.5.0"
   required_providers {
     aws     = { source = "hashicorp/aws", version = "~> 5.0" }
-    archive = { source = "hashicorp/archive", version = "~> 2.4" }
   }
 }
 
@@ -23,18 +22,11 @@ provider "aws" {
   endpoints {
     s3     = var.localstack_endpoint
     sqs    = var.localstack_endpoint
-    lambda = var.localstack_endpoint
     iam    = var.localstack_endpoint
     sts    = var.localstack_endpoint
     logs   = var.localstack_endpoint
     events = var.localstack_endpoint
   }
-}
-
-data "archive_file" "lambda" {
-  type        = "zip"
-  source_file = "${path.module}/../app/handler.py"
-  output_path = "${path.module}/lambda.zip"
 }
 
 resource "aws_s3_bucket" "uploads" {
@@ -72,13 +64,3 @@ resource "aws_iam_role_policy" "worker_queue" {
   })
 }
 
-resource "aws_lambda_function" "worker" {
-  function_name    = "localstack-demo-worker"
-  role             = aws_iam_role.worker.arn
-  handler          = "handler.handler"
-  runtime          = "python3.11"
-  filename         = data.archive_file.lambda.output_path
-  source_code_hash = data.archive_file.lambda.output_base64sha256
-  timeout          = 10
-  tags             = { App = "localstack-demo" }
-}
