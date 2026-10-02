@@ -1,47 +1,31 @@
 # LocalStack PR Infrastructure Insights
 
-A proof of concept that deploys Terraform infrastructure changes into a **LocalStack Cloud ephemeral instance** for each pull request, analyzes the Terraform plan, and publishes a developer/agent-ready insight.
+A small proof of concept: on infrastructure pull requests, GitHub Actions starts a temporary LocalStack instance, plans and applies Terraform changes, analyzes the plan, and posts an actionable insight.
 
-## What it demonstrates
+## Flow
 
-- Terraform-managed S3, SQS, Lambda, and IAM resources.
-- GitHub Actions starts a temporary LocalStack Cloud instance for the PR.
-- Terraform plans and applies against the cloud instance endpoint.
-- A Python analyzer identifies selected risky patterns and generates structured `insight.json`.
-- A concise PR comment and downloadable JSON workflow artifact.
-- The ephemeral instance is stopped by the LocalStack GitHub Action after the preview command completes.
+1. Start LocalStack with the `lstk` CLI.
+2. Run Terraform plan against LocalStack.
+3. Generate `insight.json` with the configured security checks.
+4. Apply the plan, post the insight to the PR, and upload the JSON artifact.
 
-No AWS account, persistent LocalStack instance, or dashboard is required. The optional Docker Compose setup is only for local development.
+The demo provisions an S3 bucket, SQS queue, IAM role/policy, and Lambda function. The analyzer currently flags wildcard IAM actions/resources and selected S3 public-access settings. It is a small heuristic demo, not a full security scanner.
 
 ## GitHub setup
 
-1. In LocalStack, create a **CI Auth Token** (recommended for automated workflows).
-2. In this repository, go to **Settings → Secrets and variables → Actions → New repository secret**.
-3. Add the secret named `LOCALSTACK_AUTH_TOKEN` and paste the token value.
-4. Open or update a PR that changes infrastructure, app, or analyzer files.
-
-Do not commit or paste the token into source code. The workflow uses the official `LocalStack/setup-localstack` action with the `ephemeral` state backend. The action supplies `AWS_ENDPOINT_URL` to the preview command; Terraform receives it through `TF_VAR_localstack_endpoint`.
+Add a repository Actions secret named `LOCALSTACK_AUTH_TOKEN` containing your LocalStack CI Auth Token. The workflow follows the current LocalStack GitHub Actions guidance and installs/runs `lstk` directly.
 
 ## Run locally (optional)
 
-Requirements: Docker Compose, Terraform, and Python 3.
+Start LocalStack, then run:
 
 ```bash
-docker compose up -d
-cd infra
-terraform init
-terraform plan -out=tfplan
-terraform show -json tfplan > ../plan.json
-cd ..
-python scripts/generate_insight.py --plan plan.json --output insight.json
-cd infra && terraform apply -auto-approve
+lstk start
+terraform -chdir=infra init
+terraform -chdir=infra plan -out=tfplan
+terraform -chdir=infra show -json tfplan > plan.json
+python3 scripts/generate_insight.py --plan plan.json --output insight.json
+terraform -chdir=infra apply -auto-approve tfplan
 ```
 
-For local runs, the Terraform endpoint defaults to `http://localhost:4566`.
-
-## Demo pull requests
-
-- **Risky change:** grants wildcard IAM actions/resources. The insight should flag it and recommend narrowing permissions.
-- **Safe change:** adds a tagged S3 bucket. The plan should complete without a configured security finding.
-
-The analyzer is intentionally small and heuristic-based; it is a demonstration, not a complete IaC security scanner.
+Terraform configuration is kept in one file: `infra/main.tf`.
